@@ -63,7 +63,6 @@ await exchange.publish(
     mandatory=True  # гарантировать доставку
 )
 ```
-
 ## 3. Методы для Consumer (прослушка и ответ)
 Объявление очереди запросов
 ```python
