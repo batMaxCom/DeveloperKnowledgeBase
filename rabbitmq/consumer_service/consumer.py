@@ -1,6 +1,10 @@
 import asyncio
 import json
 import logging
+from functools import partial
+from typing import Optional
+
+from fastapi import WebSocket
 
 from aio_pika import (
     Exchange,
@@ -21,12 +25,20 @@ exchange_map = {
 }
 
 class RabbitMQConsumer:
-    def __init__(self, exchange_type: ExchangeType):
+    def __init__(self, exchange_type: ExchangeType, routing_key: str):
         self.exchange_type = exchange_type
+        self.routing_key = routing_key
         self.connection: RobustConnection | None = None
         self.channel: RobustChannel | None = None
         self.exchange: Exchange | None = None
         self.request_queue = None
+
+    async def __aenter__(self):
+        await self.connect()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        await self.stop()
 
     async def connect(self) -> None:
         """Установка соединения с автоматическими повторными попытками"""
@@ -45,29 +57,17 @@ class RabbitMQConsumer:
                     auto_delete=False,  # Не удалять exchange при отсутствии подписчиков
                 )
                 # обрабатываем
-                if self.exchange_type == ExchangeType.DIRECT:
-                    self.request_queue = await self.channel.declare_queue(
-                        "data_requests_queue",  # Имя очереди
-                        durable=True,  # Сохранение очереди при перезагрузке RabbitMQ
-                        arguments={  # Дополнительные аргументы очереди
-                            'x-message-ttl': 60000,  # Время жизни сообщений (60 секунд)
-                            'x-dead-letter-exchange': f'{settings.rmq_exchange_name}.dlx'  # Exchange для мертвых сообщений
-                        }
-                    )
-                    # Привязка очереди к exchange с ключом маршрутизации
-                    await self.request_queue.bind(self.exchange, routing_key="data_requests_queue")
-                if self.exchange_type == ExchangeType.TOPIC:
-                    self.request_queue = await self.channel.declare_queue(
-                        "data_requests_queue",
-                        durable=True,
-                        arguments={
-                            'x-message-ttl': 60000,  # Время жизни сообщений (60 секунд)
-                            'x-dead-letter-exchange': f'{settings.rmq_exchange_name}.dlx'
-                        }
-                    )
-                    # Привязка очереди к exchange с ключом маршрутизации
-                    await self.request_queue.bind(self.exchange, routing_key="request.*")
-
+                self.request_queue = await self.channel.declare_queue(
+                    exchange_map.get(self.exchange_type).replace("exchange", "queue"),
+                    auto_delete=True,
+                    durable=False,
+                    arguments={  # Дополнительные аргументы очереди
+                        'x-message-ttl': 60000,  # Время жизни сообщений (60 секунд)
+                        'x-dead-letter-exchange': f'{settings.rmq_exchange_name}.dlx'  # Exchange для мертвых сообщений
+                    }
+                )
+                # Привязка очереди к exchange с ключом маршрутизации
+                await self.request_queue.bind(self.exchange, routing_key=self.routing_key)
                 logging.info("Successfully connected to RabbitMQ")
                 return
 
@@ -107,7 +107,7 @@ class RabbitMQConsumer:
             logging.exception("Error processing message")
             return {"error": str(e)}
 
-    async def handle(self, message: AbstractIncomingMessage) -> None:
+    async def handle(self, message: AbstractIncomingMessage, websocket: WebSocket) -> None:
         async with message.process():
             try:
                 # Получение адреса очереди для ответа
@@ -123,6 +123,7 @@ class RabbitMQConsumer:
                 # Если очередь слушает по паттерну "response.*" отправляем туда
                 if self.exchange_type == ExchangeType.TOPIC:
                     reply_to = f"response.{reply_to}"
+                await websocket.send_text(message.body.__str__())
                 await self._send_response(reply_to, correlation_id, result)
                 logging.info(f"Request {correlation_id} processed successfully")
             except Exception as e:
@@ -131,9 +132,10 @@ class RabbitMQConsumer:
                     error_data = {"error": f"Internal server error: {str(e)}"}
                     await self._send_response(reply_to, correlation_id, error_data)
 
-    async def start_consuming(self) -> None:
+    async def start_consuming(self, websocket: WebSocket) -> None:
         """Начинаем слушать очередь запросов."""
-        await self.request_queue.consume(self.handle, no_ack=False)
+        handler = partial(self.handle, websocket=websocket)
+        await self.request_queue.consume(handler, no_ack=False)
         logging.info("RPC Consumer started listening on 'data_requests_queue'")
         try:
             await asyncio.Future()
@@ -151,8 +153,3 @@ class RabbitMQConsumer:
             logging.info("RabbitMQ connection closed")
         except Exception as e:
             logging.error(f"Error during shutdown: {e}")
-
-
-consumer_direct: RabbitMQConsumer = RabbitMQConsumer(ExchangeType.DIRECT)
-consumer_fanout: RabbitMQConsumer = RabbitMQConsumer(ExchangeType.FANOUT)
-consumer_topic: RabbitMQConsumer = RabbitMQConsumer(ExchangeType.TOPIC)

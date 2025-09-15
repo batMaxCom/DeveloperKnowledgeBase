@@ -145,7 +145,7 @@ class RabbitMQProducer:
     async def publish(
         self,
         event: Any,
-        routing_key: str = "data_requests_queue",
+        routing_key: str,
         timeout: float = 10.0,  # Таймаут ожидания ответа
     ) -> None:
         """Публикация RPC запроса и ожидание ответа"""
@@ -168,9 +168,6 @@ class RabbitMQProducer:
             # Для FANOUT exchange routing_key игнорируется
             if self.exchange_type == ExchangeType.FANOUT:
                 routing_key = ""
-
-            if self.exchange_type == ExchangeType.TOPIC:
-                routing_key = f"request.queue"
 
             await self.exchange.publish(message, routing_key=routing_key, mandatory=True)
             logging.debug(f"Message published to {routing_key}: {event}")
