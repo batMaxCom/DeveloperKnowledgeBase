@@ -1,7 +1,7 @@
 import uvicorn
 from fastapi import FastAPI
 
-from routers import websocket_router
+from websocket import websocket_router
 
 app = FastAPI(
     docs_url="/docs"
