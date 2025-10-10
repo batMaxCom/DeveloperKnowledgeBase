@@ -1,0 +1,29 @@
+# Deployment
+```yaml
+# Пример Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.25
+        ports:
+        - containerPort: 80
+```
+Характеристики:
+
+- Управляет репликами Pods
+- Обеспечивает rolling updates
+- Откат к предыдущим версиям
+- Самовосстановление
