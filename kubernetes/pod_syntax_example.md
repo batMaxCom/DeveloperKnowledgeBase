@@ -164,23 +164,40 @@ spec:
 ```
 
 ### Volume Mounts:
+Определение Volume (на уровне Pod)
 ```yaml
-containers:
-- name: app
-  image: my-app:1.0
-  volumeMounts:
-  - name: config-volume
-    mountPath: /etc/config
-    readOnly: true
-  - name: data-volume
-    mountPath: /var/data
-  - name: temp-volume
-    mountPath: /tmp
-    subPath: temp-files
+spec:
+  volumes:                    # 📦 Список томов доступных в Pod
+  - name: config-volume       # 🔹 Имя тома
+    configMap:                # 🔹 Тип тома
+      name: app-config        # 🔹 Имя ConfigMap
 ```
-
-### Security Context:
+Mount Volume (на уровне контейнера)
 ```yaml
+spec:
+  containers:
+  - name: app
+    image: my-app:1.0
+    volumeMounts:             # 📂 Подключение томов к контейнеру
+    - name: config-volume     # 🔹 Имя тома из volumes
+      mountPath: /etc/config  # 🔹 Путь в контейнере
+      readOnly: true          # ◾ Только для чтения
+```
+Полный синтаксис VolumeMounts
+```yaml
+volumeMounts:
+- name: string               # 🔹 Обязательно - имя volume из spec.volumes
+  mountPath: string          # 🔹 Обязательно - путь в контейнере
+  readOnly: boolean          # ◾ false (default) | true
+  subPath: string            # ◾ Поддиректория volume
+  subPathExpr: string        # ◾ Выражение для поддиректории
+  mountPropagation: None     # Значения mountPropagation:
+                                # None - по умолчанию, изменения не распространяются
+                                # HostToContainer - видит монтирования с хоста
+                                # Bidirectional - двусторонняя синхронизация
+```
+### Security Context:
+```yaml  
 containers:
 - name: app
   image: my-app:1.0
