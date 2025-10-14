@@ -1,6 +1,32 @@
 # Поды (Pods) 
+
+[Вернуться](README.md)
+
 Pod - наименьшая и простейшая единица в объектной модели Kubernetes. 
 
+[Пример](./pod_syntax_example.md) конфигурации манифеста Pod.
+
+Как работает создание Pod:
+
+```text
+1. kubectl apply -f pod.yaml
+   ↓
+2. kubectl → kube-apiserver (REST API)
+   ↓  
+3. kube-apiserver → etcd (сохранить состояние)
+   ↓
+4. kube-scheduler (выбирает ноду)
+   ↓
+5. kube-apiserver → etcd (обновить Pod: назначена нода)
+   ↓
+6. kubelet (на выбранной ноде) видит изменение
+   ↓
+7. kubelet → Container Runtime (запустить контейнер)
+   ↓
+8. kubelet → kube-apiserver (Pod Running)
+   ↓
+9. kube-apiserver → etcd (обновить статус)
+```
 Представляет собой `группу из одного или нескольких контейнеров` с общими ресурсами.
 
 Ключевые характеристики Pod:
@@ -426,4 +452,153 @@ spec:
   - name: init-db
     image: busybox
     command: ['sh', '-c', 'until nslookup mysql-service; do echo waiting; sleep 2; done']
+```
+
+# Команды
+
+## Создание Pod из YAML файла
+```bash
+# Основная команда
+kubectl apply -f pod.yaml
+
+# С проверкой синтаксиса
+kubectl apply -f pod.yaml --dry-run=client
+
+# С выводом созданного манифеста
+kubectl apply -f pod.yaml -o yaml --dry-run=client
+```
+## Императивное создание Pod
+```bash
+# Простой Pod
+kubectl run my-pod --image=nginx:1.25 --port=80
+
+# С environment variables
+kubectl run my-app --image=my-app:1.0 --env="DATABASE_URL=postgresql://db:5432" --env="LOG_LEVEL=DEBUG"
+
+# С labels
+kubectl run frontend --image=nginx:1.25 --labels="app=frontend,tier=web"
+
+# С resource limits
+kubectl run resource-heavy --image=my-app:1.0 --limits="cpu=500m,memory=512Mi" --requests="cpu=100m,memory=128Mi"
+```
+
+### Просмотр Pods
+```bash
+# Все Pods в текущем namespace
+kubectl get pods
+
+# Подробная информация
+kubectl get pods -o wide
+
+# Все Pods во всех namespaces
+kubectl get pods --all-namespaces
+
+# Смотреть Pods в реальном времени
+kubectl get pods --watch
+
+# Показать определенные колонки
+kubectl get pods -o custom-columns="NAME:.metadata.name,STATUS:.status.phase,NODE:.spec.nodeName"
+```
+
+### Детальная информация о Pod
+```bash
+# Описание Pod
+kubectl describe pod my-pod
+
+# Только определенные секции
+kubectl describe pod my-pod | grep -A 10 "Containers"
+kubectl describe pod my-pod | grep -A 5 "Conditions"
+
+# В YAML формате (текущее состояние)
+kubectl get pod my-pod -o yaml
+
+# В JSON формате
+kubectl get pod my-pod -o json
+```
+### Логи Pod
+```bash
+# Логи контейнера
+kubectl logs my-pod
+
+# Логи конкретного контейнера (если несколько в Pod)
+kubectl logs my-pod -c container-name
+
+# Логи в реальном времени
+kubectl logs my-pod -f
+
+# Логи за последнее время
+kubectl logs my-pod --since=1h
+kubectl logs my-pod --since=2024-01-15T10:00:00Z
+
+# Логи предыдущего контейнера (если был перезапуск)
+kubectl logs my-pod --previous
+
+# Лимит строк
+kubectl logs my-pod --tail=50
+```
+## Выполнение команд в Pod
+```bash
+# Интерактивный shell
+kubectl exec -it my-pod -- /bin/bash
+kubectl exec -it my-pod -- /bin/sh
+
+# Выполнить команду
+kubectl exec my-pod -- ls -la /app
+kubectl exec my-pod -- cat /etc/config/settings.conf
+
+# В конкретном контейнере
+kubectl exec -it my-pod -c sidecar-container -- /bin/bash
+```
+## Порт-форвардинг
+``` bash
+# Проброс порта к Pod
+kubectl port-forward my-pod 8080:80
+
+# Проброс к конкретному контейнеру
+kubectl port-forward my-pod 8080:80 -c container-name
+
+# В фоновом режиме
+kubectl port-forward my-pod 8080:80 &
+```
+## Удаление Pod
+```bash
+# Удалить Pod
+kubectl delete pod my-pod
+
+# Удалить несколько Pods
+kubectl delete pod pod-1 pod-2 pod-3
+
+# Удалить все Pods в namespace
+kubectl delete pods --all
+
+# Удалить по label
+kubectl delete pods -l app=frontend
+
+# Принудительное удаление (если завис)
+kubectl delete pod my-pod --force --grace-period=0
+```
+## Рестарт и обновление
+```bash
+# Рестарт Pod (удаление и создание заново)
+kubectl delete pod my-pod && kubectl apply -f pod.yaml
+
+# Изменение Pod "на лету" (не рекомендуется для Production)
+kubectl edit pod my-pod
+```
+## Отладка и диагностика
+```bash
+# События связанные с Pod
+kubectl get events --field-selector involvedObject.name=my-pod
+
+# Все события в namespace
+kubectl get events --sort-by=.lastTimestamp
+
+# Проверить ресурсы Pod
+kubectl top pod my-pod
+
+# Проверить, куда запланирован Pod
+kubectl get pod my-pod -o jsonpath='{.spec.nodeName}'
+
+# Проверить IP Pod
+kubectl get pod my-pod -o jsonpath='{.status.podIP}'\
 ```
