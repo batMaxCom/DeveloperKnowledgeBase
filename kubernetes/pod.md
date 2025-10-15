@@ -550,7 +550,7 @@ kubectl exec my-pod -- cat /etc/config/settings.conf
 kubectl exec -it my-pod -c sidecar-container -- /bin/bash
 ```
 ## Порт-форвардинг
-``` bash
+```bash
 # Проброс порта к Pod
 kubectl port-forward my-pod 8080:80
 
@@ -560,6 +560,7 @@ kubectl port-forward my-pod 8080:80 -c container-name
 # В фоновом режиме
 kubectl port-forward my-pod 8080:80 &
 ```
+
 ## Удаление Pod
 ```bash
 # Удалить Pod

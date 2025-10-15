@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: configmap-core
+  labels:
+    app: test-app
+    component: api
+    environment: dev
+data:
+  # Startup configuration
+  PORT: "80"
+  TZ: "Europe/Moscow"

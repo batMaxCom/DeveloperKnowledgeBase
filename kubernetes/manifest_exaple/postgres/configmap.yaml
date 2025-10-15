@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: configmap-db
+  labels:
+    app: test-app
+    component: db
+    environment: dev
+data:
+  PG_HOST: "sql-test-app"
+  PG_PORT: "5432"
+  PG_USER: "postgres"

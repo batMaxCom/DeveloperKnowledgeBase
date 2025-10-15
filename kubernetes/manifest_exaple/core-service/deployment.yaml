@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: core-service
+  labels:
+    app: test-app
+    component: api
+    environment: dev
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: core-service
+  template:
+    metadata:
+      labels:
+        app: core-service
+        version: v1.0
+    spec:
+      containers:
+      - name: core-api
+        image: test-app/core-service:v1.0
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        envFrom:
+          - configMapRef:
+              name: configmap-db
+          - configMapRef:
+              name: configmap-core
+        env:
+          - name: PG_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: secret-db
+                key: PG_PASSWORD
+        livenessProbe:
+          httpGet:
+            path: /core/docs
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /core/docs
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 5
