@@ -92,3 +92,32 @@ JOIN users USING (id);
 ```
 
 Но чаще исползуют `ON` — он универсальней.
+
+## Примеры
+
+1) Получить список пользователей и их заказов (имя + продукт).
+```sql
+SELECT u.name, o.product
+FROM users u
+INNER JOIN orders o ON u.id = o.user_id;
+```
+2) Получить всех пользователей, даже тех, у кого нет заказов.
+```sql 
+SELECT u.name, o.product
+FROM users u
+LEFT JOIN orders o ON u.id = o.user_id;
+```
+3) Получить всех пользователей и сумму их заказов.
+```sql
+SELECT u.name, SUM(o.price) AS sum_order
+FROM users u
+LEFT JOIN orders o ON u.id = o.user_id
+GROUP BY u.id, u.name; 
+```
+4) Получить пользователей, у которых нет заказов.
+```sql
+SELECT u.name
+FROM users u
+LEFT JOIN orders o ON u.id = o.user_id
+WHERE o.id IS NULL; 
+```

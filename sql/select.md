@@ -91,3 +91,22 @@ LIMIT 10 OFFSET 20;
 ```
 Где:
 `OFFSET` — это оператор, который пропускает указанное количество строк в результирующем наборе запроса перед началом выборки.
+
+## Примеры
+
+1) Как выбрать только email и username из таблицы users?
+```sql
+SELECT email, username FROM users;
+```
+2) Как выбрать всех пользователей старше 30?
+```sql
+SELECT * FROM users WHERE age >30;
+```
+3) Как выбрать 5 последних заказов по дате?
+```sql
+SELECT * FROM orders ORDER BY created_at DESC LIMIT 5;
+```
+4) Как получить уникальные значения поля "role" из таблицы users?
+```sql
+SELECT DISTINCT role FROM users;
+```

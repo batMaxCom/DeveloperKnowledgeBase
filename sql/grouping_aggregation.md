@@ -66,32 +66,48 @@ FROM users
 GROUP BY country
 HAVING COUNT(*) > 10;
 ```
-1. 
+
+## Примеры
+1) Получить среднюю сумму заказа по каждому пользователю.
 ```sql
 SELECT u.name, AVG(o.price) as avg_price
 FROM users u
 LEFT JOIN orders o ON u.id = o.user_id
 GROUP BY u.name;
 ```
-2. 
+2) Получить количество заказов у каждого пользователя.
 ```sql
-SELECT u.name, COUNT(o.id) as avg_price
+SELECT u.name, COUNT(o.id) AS order_count
 FROM users u
 LEFT JOIN orders o ON u.id = o.user_id
 GROUP BY u.name;
 ```
-3.
+3) Получить только тех пользователей, у которых количество заказов > 2.
 ```sql
 SELECT u.name
 FROM users u
 LEFT JOIN orders o ON u.id = o.user_id
-GROUP BY u.name;
-HAVING COUNT(o.id) > 2
+GROUP BY u.name
+HAVING COUNT(o.id) > 2;
 ```
-4
+4) Получить самый дорогой заказ каждого пользователя.
+- Вариант 1: просто получить максимальную цену у каждого пользователя
 ```sql
-SELECT u.name, o.id, MAX(o.price)
+SELECT u.name, MAX(o.price) AS max_price
 FROM users u
 LEFT JOIN orders o ON u.id = o.user_id
 GROUP BY u.name;
+```
+- Вариант 2: получить именно заказ (id) с максимальной ценой
+
+Используем подзапрос:
+```sql
+SELECT u.name, o.id, o.price
+FROM users u
+LEFT JOIN orders o ON u.id = o.user_id
+WHERE o.price = (
+    SELECT MAX(price)
+    FROM orders
+    WHERE user_id = u.id
+);
 ```
