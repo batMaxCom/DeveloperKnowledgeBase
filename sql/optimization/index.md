@@ -158,7 +158,22 @@ SELECT * FROM docs WHERE to_tsvector('russian', text) @@ to_tsquery('postgres & 
 CREATE INDEX idx_locations_gist ON places USING GIST(geo_point);
 ```
 
-# Главное правило
+## Главное правило
 - Если нужны геоданные, диапазоны, расстояния, близость — бери `GiST`.
 - Если нужен поиск внутри структур (JSONB/массивы/слова) — бери `GIN`.
 - Если простые сравнения — `B-tree`.
+
+# Покрывающие индексы (index-only scan)
+
+Индекс считается покрывающим, если запрос может быть выполнен только по индексу, без чтения таблицы.
+
+Пример:
+```sql
+CREATE INDEX idx_orders_cover ON orders(user_id, created_at);
+```
+```sql
+SELECT user_id, created_at
+FROM orders
+WHERE user_id = 10
+ORDER BY created_at DESC;
+```
